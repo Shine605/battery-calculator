@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>电池传送带供需计算器</title>
+    <style>
+        body { 
+            font-family: 微软雅黑; 
+            padding: 56px 28px;
+            background: #f5f5f5;
+            font-size: 25px;
+        }
+        .box { 
+            background: #fff; 
+            padding: 49px;
+            border-radius: 14px; 
+            max-width: 1260px;
+            margin: 0 auto; 
+        }
+        h3 { font-size: 34px; margin: 0 0 21px 0; }
+        .item { margin: 25px 0; }
+        label { display: inline-block; width: 252px; font-size: 25px; }
+        input { 
+            padding: 13px; width: 105px; font-size: 25px; 
+            border-radius: 6px; border: 1px solid #ccc;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+        .input-tip { font-size: 25px; margin-left: 8px; color: #666; }
+        .switch-bar { margin: 28px 0; }
+        .switch-bar h4 { margin: 14px 0; font-size: 25px; }
+        .switch-btns { display: flex; gap: 14px; flex-wrap: wrap; }
+        .switch-btn {
+            padding: 13px 22px; border: none; border-radius: 6px;
+            background: #409eff; color: #fff; cursor: pointer; font-size: 22px;
+        }
+        .switch-btn.off { background: #cccccc; cursor: not-allowed; }
+        .step-bar { margin: 20px 0; display: flex; align-items: center; gap: 16px; }
+        .step-btn {
+            width: 48px; height: 48px; font-size: 24px;
+            border: none; border-radius: 8px; background: #409eff; color: #fff; cursor: pointer;
+        }
+        .step-btn:disabled {
+            background: #ccc !important; color: #999 !important;
+            cursor: not-allowed !important; pointer-events: none !important;
+        }
+        .step-text { font-size: 26px; font-weight: bold; }
+        .formula { background: #eef6ff; padding: 17px; border-radius: 7px; margin: 28px 0; font-size: 28px; font-weight: bold; }
+        .manual-formula { background: #eef6ff; padding: 17px; border-radius: 7px; margin: 0 0 20px 0; font-size: 28px; font-weight: bold; }
+        .manual-step { font-size: 26px; font-weight: bold; margin-bottom: 20px; }
+        .fold-btn {
+            width: 100%; padding: 18px; margin: 28px 0;
+            border: none; border-radius: 10px; background: #4caf84; color: #fff;
+            font-size: 25px; cursor: pointer; font-family: 微软雅黑;
+            transition: background 0.2s;
+        }
+        .fold-btn:hover { background: #3d9e6e; }
+        .manual-wrap { display: none; }
+        .rate-btns { margin: 28px 0 20px 0; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+        .rate-btn, #backBtn, #resetBtn {
+            padding: 14px 28px; font-size: 22px; cursor: pointer; border: none; border-radius: 7px;
+            transition: background 0.2s;
+        }
+        .rate-btn { background: #409eff; color: #fff; }
+        .rate-btn:hover { background: #3a8fd4; }
+        #backBtn { background: #e6a23a; color: #fff; }
+        #backBtn:hover { background: #d49530; }
+        #resetBtn { background: #f56c6c; color: #fff; }
+        #resetBtn:hover { background: #e06060; }
+        .best { margin: 28px 0; padding: 28px; background: #f0fff4; border-radius: 8px; line-height: 2.5; font-size: 25px; }
+        .res { margin-top: 21px; padding: 28px; background: #f8f9fa; border-radius: 8px; line-height: 2.5; font-size: 25px; }
+        .warn { color: red; font-weight: bold; }
+        .ok { color: green; font-weight: bold; }
+        hr { border: 0; border-top: 1px solid #ddd; margin: 15px 0; }
+    </style>
+</head>
+<body>
+<div class="box">
+    <h3>🔋 电池传送带供需计算器</h3>
+    <div class="item">
+        <label>单节电池电量：</label>
+        <input type="number" id="batCap" value="3200">
+        <span class="input-tip">（功率值）</span>
+    </div>
+    <div class="item">
+        <label>电池发电时间：</label>
+        <input type="number" id="powerTime" value="40" min="1">
+        <span class="input-tip">（秒）</span>
+    </div>
+    <div class="item">
+        <label>传送带速度：</label>
+        <input type="number" id="baseSec" value="2">
+        <span class="input-tip">（秒/单位）</span>
+    </div>
+    <div class="item">
+        <label>原始需电量：</label>
+        <input type="number" id="needPower" value="4800">
+        <span class="input-tip">（功率值）</span>
+    </div>
+
+    <div class="switch-bar">
+        <h4>最优解可用倍率开关（关闭则不参与最优计算）</h4>
+        <div class="switch-btns" id="switchBtns"></div>
+    </div>
+
+    <div class="step-bar">
+        <button class="step-btn" id="stepMinus">-</button>
+        <span class="step-text">当前步数：<span id="stepNum">0</span></span>
+        <button class="step-btn" id="stepPlus">+</button>
+    </div>
+
+    <div class="formula">
+        当前倍率公式：<span id="formulaText">1</span>
+    </div>
+
+    <div class="best" id="bestResult"></div>
+
+    <button class="fold-btn" id="foldManualBtn">📐 展开手动计算</button>
+
+    <div class="manual-wrap" id="manualWrap">
+        <div class="manual-formula">当前计算公式：<span id="manualFormulaText">1</span></div>
+        <div class="manual-step">当前步数：<span id="manualStepNum">0</span></div>
+
+        <div class="rate-btns">
+            <button class="rate-btn" data-val="0.5" data-name="1/2">1/2</button>
+            <button class="rate-btn" data-val="0.333333" data-name="1/3">1/3</button>
+            <button class="rate-btn" data-val="0.666666" data-name="2/3">2/3</button>
+            <button class="rate-btn" data-val="0.75" data-name="3/4">3/4</button>
+            <button class="rate-btn" data-val="0.375" data-name="3/8">3/8</button>
+            <button class="rate-btn" data-val="0.625" data-name="5/8">5/8</button>
+            <button class="rate-btn" data-val="0.833333" data-name="5/6">5/6</button>
+            <button class="rate-btn" data-val="0.875" data-name="7/8">7/8</button>
+            <button id="backBtn">↩️ 退格</button>
+            <button id="resetBtn">🔄 重置</button>
+        </div>
+        <div class="res" id="result"></div>
+    </div>
+</div>
+
+<script>
+const rateList = [
+    {name:"1/2", val:0.5, numerator:1, denominator:2},
+    {name:"1/3", val:0.333333, numerator:1, denominator:3},
+    {name:"2/3", val:0.666666, numerator:2, denominator:3},
+    {name:"3/4", val:0.75, numerator:3, denominator:4},
+    {name:"3/8", val:0.375, numerator:3, denominator:8},
+    {name:"5/8", val:0.625, numerator:5, denominator:8},
+    {name:"5/6", val:0.833333, numerator:5, denominator:6},
+    {name:"7/8", val:0.875, numerator:7, denominator:8}
+];
+
+const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+const simplifyFraction = (n, d) => { const g = gcd(n,d); return { num: n/g, den: d/g }; };
+
+let rateSwitch = Object.fromEntries(rateList.map(r => [r.name, true]));
+let targetStep = 0;
+let isManual = false;
+const MAX_STEP = 10;
+let allSolutions = [], globalBest = null, stepList = [0];
+
+// 全量乘积表（分数键 -> { formula, steps }）
+let fractionMap = new Map();
+
+function getBaseFormula(names, enabledSet) {
+    if (names.length === 0) return { formula: '1', totalVal: 1, steps: 0 };
+    let n = 1, d = 1;
+    for (const name of names) {
+        const r = rateList.find(r => r.name === name);
+        if (r) { n *= r.numerator; d *= r.denominator; }
+    }
+    const { num, den } = simplifyFraction(n, d);
+    const val = num / den;
+    const matched = rateList.find(r => r.numerator === num && r.denominator === den);
+    if (matched && enabledSet.has(matched.name)) {
+        return { formula: matched.name, totalVal: val, steps: 1 };
+    } else {
+        return {
+            formula: names.join(' × '),
+            totalVal: val,
+            steps: names.length
+        };
+    }
+}
+
+function displayFormula(baseFormula) {
+    return baseFormula === '1' ? '1' : `1 × ${baseFormula}`;
+}
+
+function getInputs() {
+    const batCap = +document.getElementById('batCap').value;
+    const powerTime = +document.getElementById('powerTime').value;
+    const baseSec = +document.getElementById('baseSec').value;
+    const needPower = +document.getElementById('needPower').value;
+    const realNeed = needPower - 200;
+    const enabledRates = rateList.filter(r => rateSwitch[r.name]);
+    return { batCap, powerTime, baseSec, needPower, realNeed, enabledRates };
+}
+
+// 构建全量分数表(基于启用倍率)
+function buildFractionMap(enabledRates) {
+    const map = new Map();
+    const enabledSet = new Set(enabledRates.map(r => r.name));
+    const visited = new Map(); // 分数键 -> 最小步数
+
+    function dfs(num, den, names, depth) {
+        const key = `${num}/${den}`;
+        if (visited.has(key) && visited.get(key) <= depth) return;
+        visited.set(key, depth);
+
+        const baseF = getBaseFormula(names, enabledSet);
+        const existing = map.get(key);
+        if (!existing || existing.steps > depth) {
+            map.set(key, { formula: baseF.formula, steps: depth });
+        }
+        if (depth >= MAX_STEP) return;
+        for (const rate of enabledRates) {
+            const newNum = num * rate.numerator;
+            const newDen = den * rate.denominator;
+            const simp = simplifyFraction(newNum, newDen);
+            dfs(simp.num, simp.den, [...names, rate.name], depth + 1);
+        }
+    }
+
+    dfs(1, 1, [], 0);
+
+    // 确保 1/1 存在
+    if (!map.has('1/1')) {
+        map.set('1/1', { formula: '1', steps: 0 });
+    }
+    return map;
+}
+
+// 自动最优计算（沿用原逻辑，确保全局最优）
+function computeSolutions(inputs) {
+    const { batCap, powerTime, baseSec, realNeed, enabledRates } = inputs;
+    const targetRate = (realNeed * baseSec) / (powerTime * batCap);
+    const visited = new Map();
+    const enabledSet = new Set(enabledRates.map(r => r.name));
+    const stepBest = new Map();
+
+    function dfs(currentRate, names, depth) {
+        const key = currentRate.toFixed(8);
+        if (visited.has(key) && visited.get(key) <= depth) return;
+        visited.set(key, depth);
+        if (currentRate < targetRate) return;
+
+        const sec = baseSec / currentRate;
+        const power = (powerTime / sec) * batCap;
+        const surplus = Math.round(power - realNeed);
+        if (power > realNeed) {
+            const steps = depth;
+            const baseF = getBaseFormula(names, enabledSet);
+            const sol = { formula: baseF.formula, sec, power, surplus, steps };
+            const old = stepBest.get(steps);
+            if (!old || surplus < old.surplus || (surplus === old.surplus && steps < old.steps)) {
+                stepBest.set(steps, sol);
+            }
+            if (surplus === 0) return;
+        } else {
+            return;
+        }
+        if (depth >= MAX_STEP) return;
+        for (const rate of enabledRates) {
+            dfs(currentRate * rate.val, [...names, rate.name], depth + 1);
+        }
+    }
+
+    dfs(1, [], 0);
+
+    if (stepBest.size === 0) {
+        const defSec = baseSec;
+        const defPower = (powerTime / defSec) * batCap;
+        const defSurplus = Math.round(defPower - realNeed);
+        stepBest.set(0, { formula: '1', sec: defSec, power: defPower, surplus: defSurplus, steps: 0 });
+    }
+
+    const entries = [...stepBest.entries()].sort((a, b) => a[0] - b[0]);
+    const slim = [], steps = [];
+    let prevSurplus = Infinity;
+    for (const [step, sol] of entries) {
+        if (sol.surplus < prevSurplus) {
+            slim.push(sol);
+            steps.push(step);
+            prevSurplus = sol.surplus;
+        }
+    }
+
+    const globalBestSol = slim.reduce((best, cur) =>
+        (cur.surplus < best.surplus || (cur.surplus === best.surplus && cur.steps < best.steps)) ? cur : best
+    );
+    return { slim, steps, globalBestSol };
+}
+
+function fullRecalc() {
+    const inputs = getInputs();
+    // 重建分数表
+    fractionMap = buildFractionMap(inputs.enabledRates);
+
+    const { slim, steps, globalBestSol } = computeSolutions(inputs);
+    allSolutions = slim;
+    stepList = steps;
+    globalBest = globalBestSol;
+
+    if (!isManual) {
+        targetStep = globalBest.steps;
+    } else if (!stepList.includes(targetStep)) {
+        targetStep = stepList.reduce((prev, curr) => Math.abs(curr - targetStep) < Math.abs(prev - targetStep) ? curr : prev);
+    }
+    refreshUI(inputs);
+}
+
+function refreshUI(inputs) {
+    const { realNeed } = inputs;
+    document.getElementById('stepNum').textContent = targetStep;
+
+    const curSol = allSolutions.find(s => s.steps === targetStep) || globalBest;
+    document.getElementById('formulaText').textContent = displayFormula(curSol.formula);
+
+    document.getElementById('bestResult').innerHTML = `
+        🎯 最优倍率公式：<strong>${displayFormula(globalBest.formula)}</strong><br>
+        🎯 全局最优电量：${Math.round(globalBest.power)}<br>
+        <hr>
+        🔹 实际需电量：${realNeed}<br>
+        🔹 产出电量：${Math.round(curSol.power)}<br>
+        🔹 富余电量：${curSol.surplus}<br>
+        🔹 传送带间隔：${curSol.sec.toFixed(2)} 秒
+    `;
+
+    const stepPlus = document.getElementById('stepPlus');
+    const stepMinus = document.getElementById('stepMinus');
+    const idx = stepList.indexOf(targetStep);
+    stepMinus.disabled = (idx <= 0);
+    stepPlus.disabled = (targetStep >= globalBest.steps);
+}
+
+document.getElementById('stepPlus').onclick = () => {
+    const idx = stepList.indexOf(targetStep);
+    if (idx < stepList.length - 1 && targetStep < globalBest.steps) {
+        isManual = true;
+        targetStep = stepList[idx + 1];
+        refreshUI(getInputs());
+    }
+};
+document.getElementById('stepMinus').onclick = () => {
+    const idx = stepList.indexOf(targetStep);
+    if (idx > 0) {
+        isManual = true;
+        targetStep = stepList[idx - 1];
+        refreshUI(getInputs());
+    }
+};
+
+function renderSwitch() {
+    const wrap = document.getElementById('switchBtns');
+    wrap.innerHTML = '';
+    rateList.forEach(r => {
+        const btn = document.createElement('button');
+        btn.className = 'switch-btn' + (rateSwitch[r.name] ? '' : ' off');
+        btn.textContent = r.name;
+        btn.onclick = () => {
+            rateSwitch[r.name] = !rateSwitch[r.name];
+            renderSwitch();
+            isManual = false;
+            fullRecalc();
+        };
+        wrap.appendChild(btn);
+    });
+}
+
+['batCap','powerTime','baseSec','needPower'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+        isManual = false;
+        fullRecalc();
+    });
+});
+
+document.querySelectorAll('input[type="number"]').forEach(input => {
+    input.addEventListener('wheel', e => e.preventDefault());
+});
+
+document.getElementById('foldManualBtn').onclick = function() {
+    const wrap = document.getElementById('manualWrap');
+    const show = wrap.style.display !== 'block';
+    wrap.style.display = show ? 'block' : 'none';
+    this.textContent = show ? '📐 收起手动计算' : '📐 展开手动计算';
+};
+
+// 手动计算面板（基于分数表，彻底化简）
+(function() {
+    const resDiv = document.getElementById('result');
+    const manualFormulaEl = document.getElementById('manualFormulaText');
+    const manualStepEl = document.getElementById('manualStepNum');
+    let manualNames = [];
+
+    function mergeProduct() {
+        let n = 1, d = 1;
+        for (const name of manualNames) {
+            const r = rateList.find(r => r.name === name);
+            if (r) { n *= r.numerator; d *= r.denominator; }
+        }
+        return simplifyFraction(n, d);
+    }
+
+    function refreshManual() {
+        const inputs = getInputs();
+        const { batCap, powerTime, baseSec, needPower, realNeed, enabledRates } = inputs;
+
+        // 更新分数表（确保使用最新启用的倍率）
+        // 注意：fullRecalc 已更新全局表，但直接使用全局 fractionMap 即可
+        const { num, den } = mergeProduct();
+        const key = `${num}/${den}`;
+        const optimal = fractionMap.get(key);
+
+        let formula, steps;
+        if (optimal) {
+            formula = optimal.formula;
+            steps = optimal.steps;
+            // 覆盖 manualNames
+            if (formula === '1') {
+                manualNames = [];
+            } else {
+                manualNames = formula.split(' × ').filter(n => n !== '1');
+            }
+        } else {
+            // 理论上不应出现，回退
+            formula = '1';
+            steps = 0;
+            manualNames = [];
+        }
+
+        manualFormulaEl.textContent = displayFormula(formula);
+        manualStepEl.textContent = steps;
+
+        const totalVal = num / den;
+        const sec = baseSec / totalVal;
+        const power = (powerTime / sec) * batCap;
+        const surplus = Math.round(power - realNeed);
+
+        const statusHtml = (power > realNeed)
+            ? '<span class="ok">✅ 供电充足</span><br>'
+            : '<span class="warn">⚠️ 供电不足，无法满足用电需求！</span><br>';
+
+        resDiv.innerHTML = `
+            ${statusHtml}
+            🔹 实际需电量：${realNeed}<br>
+            🔹 产出电量：${Math.round(power)}<br>
+            🔹 富余电量：${surplus}<br>
+            🔹 传送带间隔：${sec.toFixed(2)} 秒
+        `;
+    }
+
+    document.querySelectorAll('.rate-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            manualNames.push(btn.dataset.name);
+            refreshManual();
+        });
+    });
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+        if (manualNames.length === 0) return;
+        if (manualNames.length === 1) {
+            manualNames = [];
+        } else {
+            manualNames.pop();
+        }
+        refreshManual();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        manualNames = [];
+        refreshManual();
+    });
+
+    refreshManual();
+})();
+
+renderSwitch();
+fullRecalc();
+</script>
+</body>
+</html>
