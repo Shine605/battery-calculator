@@ -291,7 +291,7 @@ function computeSolutions(inputs) {
         const sec = baseSec / currentRate;
         const power = (powerTime / sec) * batCap;
         const surplus = Math.round(power - realNeed);
-        if (power >= realNeed) {
+        if (power + 1e-6 >= realNeed) {
             const steps = depth;
             const baseF = getBaseFormula(names, enabledSet);
             const sol = { formula: baseF.formula, sec, power, surplus, steps };
@@ -369,12 +369,12 @@ function refreshUI(inputs) {
 
     document.getElementById('bestResult').innerHTML = `
         🎯 最优倍率公式：<strong>${displayFormula(globalBest.formula)}</strong><br>
-        🎯 全局最优电量：${Math.round(globalBest.power)}<br>
+        🎯 全局最优电量：${globalBest.power.toFixed(2)}<br>
         <hr>
         ${powerWarning}
-        🔹 实际需电量：${realNeed}<br>
-        🔹 产出电量：${Math.round(curSol.power)}<br>
-        🔹 富余电量：${curSol.surplus}<br>
+        🔹 实际需电量：${realNeed.toFixed(2)}<br>
+        🔹 产出电量：${curSol.power.toFixed(2)}<br>
+        🔹 富余电量：${(curSol.power - realNeed).toFixed(2)}<br>
         🔹 传送带间隔：${curSol.sec.toFixed(2)} 秒
     `;
 
@@ -500,17 +500,16 @@ document.getElementById('foldManualBtn').onclick = function() {
         const totalVal = num / den;
         const sec = baseSec / totalVal;
         const power = (powerTime / sec) * batCap;
-        const surplus = Math.round(power - realNeed);
-
+        const surplus = power - realNeed;
         const statusHtml = (surplus > -1)
             ? '<span class="ok">✅ 供电充足</span><br>'
             : '<span class="warn">⚠️ 供电不足，无法满足用电需求！</span><br>';
 
         resDiv.innerHTML = `
             ${statusHtml}
-            🔹 实际需电量：${realNeed}<br>
-            🔹 产出电量：${Math.round(power)}<br>
-            🔹 富余电量：${surplus}<br>
+            🔹 实际需电量：${realNeed.toFixed(2)}<br>
+            🔹 产出电量：${power.toFixed(2)}<br>
+            🔹 富余电量：${surplus.toFixed(2)}<br>
             🔹 传送带间隔：${sec.toFixed(2)} 秒
         `;
     }
