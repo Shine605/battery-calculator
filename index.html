@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>电池供需计算器</title>
     <style>
+        * { box-sizing: border-box; }
         body { 
             font-family: 微软雅黑; 
             padding: 56px 28px;
@@ -21,19 +22,17 @@
         .item { margin: 25px 0; }
         label { display: inline-block; width: 252px; font-size: 25px; }
         input { 
-            padding: 13px; width: 105px; font-size: 25px; 
+            padding: 13px; width: 150px; font-size: 25px; 
             border-radius: 6px; border: 1px solid #ccc;
         }
         .input-tip { font-size: 25px; margin-left: 8px; color: #666; }
 
-        /* 微调按钮（仅需电量输入框有） */
         .input-spinner {
             position: relative;
             display: inline-block;
         }
         .input-spinner input {
-            box-sizing: border-box;
-            width: 133px;
+            width: 150px;
             padding: 13px 32px 13px 13px;
             font-size: 25px;
             border-radius: 6px;
@@ -48,15 +47,12 @@
             flex-direction: column;
             justify-content: center;
         }
-        .input-spinner:hover .spinner-btns {
-            display: flex;
-        }
+        .input-spinner:hover .spinner-btns { display: flex; }
         .spinner-btns button {
             background: transparent;
             border: none;
             cursor: pointer;
             font-size: 18px;
-            line-height: 1;
             color: #999;
             padding: 0 3px;
             flex: 1;
@@ -64,9 +60,7 @@
             align-items: center;
             justify-content: center;
         }
-        .spinner-btns button:hover {
-            color: #555;
-        }
+        .spinner-btns button:hover { color: #555; }
 
         .switch-bar { margin: 28px 0; }
         .switch-bar h4 { margin: 14px 0; font-size: 25px; }
@@ -112,6 +106,7 @@
         .res { margin-top: 21px; padding: 28px; background: #f8f9fa; border-radius: 8px; line-height: 2.5; font-size: 25px; }
         .warn { color: red; font-weight: bold; }
         .ok { color: green; font-weight: bold; }
+        .gray { color: #aaa; }
         hr { border: 0; border-top: 1px solid #ddd; margin: 15px 0; }
     </style>
 </head>
@@ -206,7 +201,6 @@ const MAX_STEP = 10;
 let allSolutions = [], globalBest = null, stepList = [0];
 let fractionMap = new Map();
 
-// ----- 解析分数输入 -----
 function parseInputValue(str) {
     if (!str) return 0;
     str = str.trim();
@@ -235,11 +229,7 @@ function getBaseFormula(names, enabledSet) {
     if (matched && enabledSet.has(matched.name)) {
         return { formula: matched.name, totalVal: val, steps: 1 };
     } else {
-        return {
-            formula: names.join(' × '),
-            totalVal: val,
-            steps: names.length
-        };
+        return { formula: names.join(' × '), totalVal: val, steps: names.length };
     }
 }
 
@@ -257,22 +247,17 @@ function getInputs() {
     return { batCap, powerTime, baseSec, needPower, realNeed, enabledRates };
 }
 
-// 构建全量分数表(用于手动计算)
 function buildFractionMap(enabledRates) {
     const map = new Map();
     const enabledSet = new Set(enabledRates.map(r => r.name));
-    const visited = new Map(); 
-
+    const visited = new Map();
     function dfs(num, den, names, depth) {
         const key = `${num}/${den}`;
         if (visited.has(key) && visited.get(key) <= depth) return;
         visited.set(key, depth);
-
         const baseF = getBaseFormula(names, enabledSet);
         const existing = map.get(key);
-        if (!existing || existing.steps > depth) {
-            map.set(key, { formula: baseF.formula, steps: depth });
-        }
+        if (!existing || existing.steps > depth) map.set(key, { formula: baseF.formula, steps: depth });
         if (depth >= MAX_STEP) return;
         for (const rate of enabledRates) {
             const newNum = num * rate.numerator;
@@ -281,20 +266,17 @@ function buildFractionMap(enabledRates) {
             dfs(simp.num, simp.den, [...names, rate.name], depth + 1);
         }
     }
-
     dfs(1, 1, [], 0);
     if (!map.has('1/1')) map.set('1/1', { formula: '1', steps: 0 });
     return map;
 }
 
-// ★ 自动最优计算（分数法核心）
 function computeSolutions(inputs) {
     const { batCap, powerTime, baseSec, realNeed, enabledRates } = inputs;
+    if (realNeed < 0) return { slim: [], steps: [], globalBestSol: null };
     const enabledSet = new Set(enabledRates.map(r => r.name));
     const stepBest = new Map();
     const visited = new Map();
-
-    // 不等式：powerTime * batCap * currentNum >= realNeed * baseSec * currentDen
     const leftConst = powerTime * batCap;
     const rightConst = realNeed * baseSec;
 
@@ -302,29 +284,16 @@ function computeSolutions(inputs) {
         const key = `${currentNum}/${currentDen}`;
         if (visited.has(key) && visited.get(key) <= depth) return;
         visited.set(key, depth);
-
-        if (leftConst * currentNum < rightConst * currentDen) return; // 功率不足
-
+        if (leftConst * currentNum < rightConst * currentDen) return;
         const power = (leftConst * currentNum) / (baseSec * currentDen);
         const surplus = power - realNeed;
-
         const steps = depth;
         const baseF = getBaseFormula(names, enabledSet);
         const sec = (baseSec * currentDen) / currentNum;
-        const sol = {
-            formula: baseF.formula,
-            sec,
-            power,
-            surplus: Math.round(surplus),
-            steps
-        };
+        const sol = { formula: baseF.formula, sec, power, surplus: Math.round(surplus), steps };
         const old = stepBest.get(steps);
-        if (!old || sol.surplus < old.surplus || (sol.surplus === old.surplus && sol.steps < old.steps)) {
-            stepBest.set(steps, sol);
-        }
-
-        if (Math.abs(surplus) < 1e-9) return; // 完美解
-
+        if (!old || sol.surplus < old.surplus || (sol.surplus === old.surplus && sol.steps < old.steps)) stepBest.set(steps, sol);
+        if (Math.abs(surplus) < 1e-9) return;
         if (depth >= MAX_STEP) return;
         for (const rate of enabledRates) {
             const newNum = currentNum * rate.numerator;
@@ -333,22 +302,14 @@ function computeSolutions(inputs) {
             dfs(simp.num, simp.den, [...names, rate.name], depth + 1);
         }
     }
-
     dfs(1, 1, [], 0);
 
     if (stepBest.size === 0) {
         const defSec = baseSec;
         const defPower = (powerTime * batCap) / baseSec;
         const defSurplus = Math.round(defPower - realNeed);
-        stepBest.set(0, {
-            formula: '1',
-            sec: defSec,
-            power: defPower,
-            surplus: defSurplus,
-            steps: 0
-        });
+        stepBest.set(0, { formula: '1', sec: defSec, power: defPower, surplus: defSurplus, steps: 0 });
     }
-
     const entries = [...stepBest.entries()].sort((a, b) => a[0] - b[0]);
     const slim = [], steps = [];
     let prevSurplus = Infinity;
@@ -359,7 +320,6 @@ function computeSolutions(inputs) {
             prevSurplus = sol.surplus;
         }
     }
-
     const globalBestSol = slim.reduce((best, cur) =>
         (cur.surplus < best.surplus || (cur.surplus === best.surplus && cur.steps < best.steps)) ? cur : best
     );
@@ -373,28 +333,43 @@ function fullRecalc() {
     allSolutions = slim;
     stepList = steps;
     globalBest = globalBestSol;
-
-    if (!isManual) {
-        targetStep = globalBest.steps;
-    } else if (!stepList.includes(targetStep)) {
-        targetStep = stepList.reduce((prev, curr) => Math.abs(curr - targetStep) < Math.abs(prev - targetStep) ? curr : prev);
-    }
+    if (!isManual) targetStep = globalBest ? globalBest.steps : 0;
+    else if (!stepList.includes(targetStep)) targetStep = stepList.reduce((prev, curr) => Math.abs(curr - targetStep) < Math.abs(prev - targetStep) ? curr : prev);
     refreshUI(inputs);
     if (window.refreshManualCalc) window.refreshManualCalc();
 }
 
 function refreshUI(inputs) {
     const { realNeed } = inputs;
-    document.getElementById('stepNum').textContent = targetStep;
+    const bestDiv = document.getElementById('bestResult');
+    if (realNeed < 0) {
+        document.getElementById('stepNum').textContent = '0';
+        document.getElementById('formulaText').textContent = '1';
+        bestDiv.innerHTML = `
+            <span class="ok">✅ 无需供电</span><br>
+            <span class="gray">🎯 最优倍率公式：1</span><br>
+            <span class="gray">🎯 全局最优电量：0.00</span><br>
+            <hr>
+            <span class="gray">🔹 实际需电量：0.00</span><br>
+            <span class="gray">🔹 产出电量：0.00</span><br>
+            <span class="gray">🔹 富余电量：0.00</span><br>
+            <span class="gray">🔹 运输间隔：0.00 秒</span>
+        `;
+        document.getElementById('stepMinus').disabled = true;
+        document.getElementById('stepPlus').disabled = true;
+        return;
+    }
 
+    document.getElementById('stepNum').textContent = targetStep;
     const curSol = allSolutions.find(s => s.steps === targetStep) || globalBest;
+    if (!curSol) return;
     document.getElementById('formulaText').textContent = displayFormula(curSol.formula);
 
     const powerWarning = curSol.surplus <= -1 
         ? '<span class="warn">⚠️ 供电不足，无法满足用电需求！</span><br>' 
         : '';
 
-    document.getElementById('bestResult').innerHTML = `
+    bestDiv.innerHTML = `
         🎯 最优倍率公式：<strong>${displayFormula(globalBest.formula)}</strong><br>
         🎯 全局最优电量：${(globalBest.power + 1e-9).toFixed(2)}<br>
         <hr>
@@ -412,7 +387,6 @@ function refreshUI(inputs) {
     stepPlus.disabled = (targetStep >= globalBest.steps);
 }
 
-// 步数调节
 document.getElementById('stepPlus').onclick = () => {
     const idx = stepList.indexOf(targetStep);
     if (idx < stepList.length - 1 && targetStep < globalBest.steps) {
@@ -447,7 +421,6 @@ function renderSwitch() {
     });
 }
 
-// 输入监听（文本输入框）
 ['batCap','powerTime','baseSec','needPower'].forEach(id => {
     document.getElementById(id).addEventListener('input', () => {
         isManual = false;
@@ -455,7 +428,6 @@ function renderSwitch() {
     });
 });
 
-// 微调按钮
 document.getElementById('needUp').addEventListener('click', () => {
     const input = document.getElementById('needPower');
     const current = parseInputValue(input.value);
@@ -471,7 +443,6 @@ document.getElementById('needDown').addEventListener('click', () => {
     fullRecalc();
 });
 
-// 折叠手动计算
 document.getElementById('foldManualBtn').onclick = function() {
     const wrap = document.getElementById('manualWrap');
     const show = wrap.style.display !== 'block';
@@ -498,6 +469,18 @@ document.getElementById('foldManualBtn').onclick = function() {
     function refreshManual() {
         const inputs = getInputs();
         const { batCap, powerTime, baseSec, realNeed } = inputs;
+        if (realNeed < 0) {
+            manualFormulaEl.textContent = '1';
+            manualStepEl.textContent = '0';
+            resDiv.innerHTML = `
+                <span class="ok">✅ 无需供电</span><br>
+                <span class="gray">🔹 实际需电量：0.00</span><br>
+                <span class="gray">🔹 产出电量：0.00</span><br>
+                <span class="gray">🔹 富余电量：0.00</span><br>
+                <span class="gray">🔹 运输间隔：0.00 秒</span>
+            `;
+            return;
+        }
 
         const { num, den } = mergeProduct();
         const key = `${num}/${den}`;
@@ -543,22 +526,16 @@ document.getElementById('foldManualBtn').onclick = function() {
             refreshManual();
         });
     });
-
     document.getElementById('backBtn').addEventListener('click', () => {
         if (manualNames.length === 0) return;
-        if (manualNames.length === 1) {
-            manualNames = [];
-        } else {
-            manualNames.pop();
-        }
+        if (manualNames.length === 1) manualNames = [];
+        else manualNames.pop();
         refreshManual();
     });
-
     document.getElementById('resetBtn').addEventListener('click', () => {
         manualNames = [];
         refreshManual();
     });
-
     refreshManual();
 })();
 
