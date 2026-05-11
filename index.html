@@ -291,7 +291,7 @@ function computeSolutions(inputs) {
         const sec = baseSec / currentRate;
         const power = (powerTime / sec) * batCap;
         const surplus = Math.round(power - realNeed);
-        if (power > realNeed) {
+        if (power >= realNeed) {
             const steps = depth;
             const baseF = getBaseFormula(names, enabledSet);
             const sol = { formula: baseF.formula, sec, power, surplus, steps };
