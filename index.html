@@ -273,7 +273,7 @@ function buildFractionMap(enabledRates) {
 
 function computeSolutions(inputs) {
     const { batCap, powerTime, baseSec, realNeed, enabledRates } = inputs;
-    if (realNeed < 0) return { slim: [], steps: [], globalBestSol: null };
+    if (realNeed <= 0) return { slim: [], steps: [], globalBestSol: null };
     const enabledSet = new Set(enabledRates.map(r => r.name));
     const stepBest = new Map();
     const visited = new Map();
@@ -342,7 +342,7 @@ function fullRecalc() {
 function refreshUI(inputs) {
     const { realNeed } = inputs;
     const bestDiv = document.getElementById('bestResult');
-    if (realNeed < 0) {
+    if (realNeed <= 0) {
         document.getElementById('stepNum').textContent = '0';
         document.getElementById('formulaText').textContent = '1';
         bestDiv.innerHTML = `
@@ -469,7 +469,7 @@ document.getElementById('foldManualBtn').onclick = function() {
     function refreshManual() {
         const inputs = getInputs();
         const { batCap, powerTime, baseSec, realNeed } = inputs;
-        if (realNeed < 0) {
+        if (realNeed <= 0) {
             manualFormulaEl.textContent = '1';
             manualStepEl.textContent = '0';
             resDiv.innerHTML = `
