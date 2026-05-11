@@ -244,6 +244,7 @@ function getInputs() {
     return { batCap, powerTime, baseSec, needPower, realNeed, enabledRates };
 }
 
+// 构建全量分数表(基于启用倍率)
 function buildFractionMap(enabledRates) {
     const map = new Map();
     const enabledSet = new Set(enabledRates.map(r => r.name));
@@ -273,6 +274,7 @@ function buildFractionMap(enabledRates) {
     return map;
 }
 
+// 自动最优计算（沿用原逻辑，确保全局最优）
 function computeSolutions(inputs) {
     const { batCap, powerTime, baseSec, realNeed, enabledRates } = inputs;
     const targetRate = (realNeed * baseSec) / (powerTime * batCap);
@@ -335,7 +337,9 @@ function computeSolutions(inputs) {
 
 function fullRecalc() {
     const inputs = getInputs();
+    // 重建分数表
     fractionMap = buildFractionMap(inputs.enabledRates);
+
     const { slim, steps, globalBestSol } = computeSolutions(inputs);
     allSolutions = slim;
     stepList = steps;
@@ -347,6 +351,7 @@ function fullRecalc() {
         targetStep = stepList.reduce((prev, curr) => Math.abs(curr - targetStep) < Math.abs(prev - targetStep) ? curr : prev);
     }
     refreshUI(inputs);
+    // 同步刷新手动计算区域
     if (window.refreshManualCalc) window.refreshManualCalc();
 }
 
@@ -357,6 +362,7 @@ function refreshUI(inputs) {
     const curSol = allSolutions.find(s => s.steps === targetStep) || globalBest;
     document.getElementById('formulaText').textContent = displayFormula(curSol.formula);
 
+    // 供电不足警告（当富余电量 ≤ -1）
     const powerWarning = curSol.surplus <= -1 
         ? '<span class="warn">⚠️ 供电不足，无法满足用电需求！</span><br>' 
         : '';
@@ -424,7 +430,7 @@ document.querySelectorAll('input[type="number"]').forEach(input => {
     input.addEventListener('wheel', e => e.preventDefault());
 });
 
-// 自定义微调按钮功能
+// 自定义微调按钮
 document.getElementById('needUp').addEventListener('click', () => {
     const input = document.getElementById('needPower');
     input.value = Math.max(0, parseInt(input.value, 10) + 100);
@@ -445,7 +451,7 @@ document.getElementById('foldManualBtn').onclick = function() {
     this.textContent = show ? '📐 收起手动计算' : '📐 展开手动计算';
 };
 
-// 手动计算面板（基于分数表）
+// 手动计算面板（基于分数表，彻底化简）
 (function() {
     const resDiv = document.getElementById('result');
     const manualFormulaEl = document.getElementById('manualFormulaText');
@@ -465,6 +471,8 @@ document.getElementById('foldManualBtn').onclick = function() {
         const inputs = getInputs();
         const { batCap, powerTime, baseSec, realNeed } = inputs;
 
+        // 更新分数表（确保使用最新启用的倍率）
+        // 注意：fullRecalc 已更新全局表，但直接使用全局 fractionMap 即可
         const { num, den } = mergeProduct();
         const key = `${num}/${den}`;
         const optimal = fractionMap.get(key);
@@ -473,8 +481,14 @@ document.getElementById('foldManualBtn').onclick = function() {
         if (optimal) {
             formula = optimal.formula;
             steps = optimal.steps;
-            manualNames = formula === '1' ? [] : formula.split(' × ').filter(n => n !== '1');
+            // 覆盖 manualNames
+            if (formula === '1') {
+                manualNames = [];
+            } else {
+                manualNames = formula.split(' × ').filter(n => n !== '1');
+            }
         } else {
+            // 理论上不应出现，回退
             formula = '1';
             steps = 0;
             manualNames = [];
@@ -501,10 +515,12 @@ document.getElementById('foldManualBtn').onclick = function() {
         `;
     }
 
+    // 暴露为全局函数，供外部刷新调用
+    window.refreshManualCalc = refreshManual;
+
     document.querySelectorAll('.rate-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             manualNames.push(btn.dataset.name);
-            window.refreshManualCalc = refreshManual;   // 暴露给全局调用
             refreshManual();
         });
     });
