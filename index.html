@@ -347,6 +347,7 @@ function fullRecalc() {
         targetStep = stepList.reduce((prev, curr) => Math.abs(curr - targetStep) < Math.abs(prev - targetStep) ? curr : prev);
     }
     refreshUI(inputs);
+    if (window.refreshManualCalc) window.refreshManualCalc();
 }
 
 function refreshUI(inputs) {
@@ -503,6 +504,7 @@ document.getElementById('foldManualBtn').onclick = function() {
     document.querySelectorAll('.rate-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             manualNames.push(btn.dataset.name);
+            window.refreshManualCalc = refreshManual;   // 暴露给全局调用
             refreshManual();
         });
     });
