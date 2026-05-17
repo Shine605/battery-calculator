@@ -369,10 +369,10 @@ function refreshUI(inputs) {
         : '';
 
     bestDiv.innerHTML = `
+        ${powerWarning}
         🎯 最佳倍率公式：<strong>${displayFormula(globalBest.formula)}</strong><br>
         🎯 最佳发电功率：${(globalBest.power + 200 + 1e-9).toFixed(2)}<span class="gray">（含基地200发电功率）</span><br>
         <hr>
-        ${powerWarning}
         🔹 发电功率：${(curSol.power + 200 + 1e-9).toFixed(2)}<span class="gray">（含基地200发电功率）</span><br>
         🔹 富余电量：${(curSol.power - realNeed + 1e-9).toFixed(2)}<br>
         🔹 传送带运输间隔：${(curSol.sec + 1e-9).toFixed(2)} 秒
