@@ -347,8 +347,8 @@ function refreshUI(inputs) {
         document.getElementById('formulaText').textContent = '1';
         bestDiv.innerHTML = `
             <span class="ok">✅ 无需供电</span><br>
-            <span class="gray">🎯 最优倍率公式：1</span><br>
-            <span class="gray">🎯 全局最优电量：0.00</span><br>
+            <span class="gray">🎯 最佳倍率公式：1</span><br>
+            <span class="gray">🎯 最佳发电功率：0.00</span><br>
             <hr>
             <span class="gray">🔹 实际发电功率：0.00</span><br>
             <span class="gray">🔹 发电功率：0.00</span><br>
@@ -370,8 +370,8 @@ function refreshUI(inputs) {
         : '';
 
     bestDiv.innerHTML = `
-        🎯 最优倍率公式：<strong>${displayFormula(globalBest.formula)}</strong><br>
-        🎯 全局最优电量：${(globalBest.power + 1e-9).toFixed(2)}<br>
+        🎯 最佳倍率公式：<strong>${displayFormula(globalBest.formula)}</strong><br>
+        🎯 最佳发电功率：${(globalBest.power + 1e-9).toFixed(2)}<br>
         <hr>
         ${powerWarning}
         🔹 实际发电功率：${realNeed.toFixed(2)}<br>
