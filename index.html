@@ -348,10 +348,9 @@ function refreshUI(inputs) {
         bestDiv.innerHTML = `
             <span class="ok">✅ 无需供电</span><br>
             <span class="gray">🎯 最佳倍率公式：1</span><br>
-            <span class="gray">🎯 最佳发电功率：0.00</span><br>
+            <span class="gray">🎯 最佳发电功率：200.00（含基地200发电功率）</span><br>
             <hr>
-            <span class="gray">🔹 实际发电功率：0.00</span><br>
-            <span class="gray">🔹 发电功率：0.00</span><br>
+            <span class="gray">🔹 发电功率：200.00（含基地200发电功率）</span><br>
             <span class="gray">🔹 富余电量：0.00</span><br>
             <span class="gray">🔹 传送带运输间隔：0.00 秒</span>
         `;
@@ -371,11 +370,10 @@ function refreshUI(inputs) {
 
     bestDiv.innerHTML = `
         🎯 最佳倍率公式：<strong>${displayFormula(globalBest.formula)}</strong><br>
-        🎯 最佳发电功率：${(globalBest.power + 1e-9).toFixed(2)}<br>
+        🎯 最佳发电功率：${(globalBest.power + 200 + 1e-9).toFixed(2)}（含基地200发电功率）<br>
         <hr>
         ${powerWarning}
-        🔹 实际发电功率：${realNeed.toFixed(2)}<br>
-        🔹 发电功率：${(curSol.power + 1e-9).toFixed(2)}<br>
+        🔹 发电功率：${(curSol.power + 200 + 1e-9).toFixed(2)}（含基地200发电功率）<br>
         🔹 富余电量：${(curSol.power - realNeed + 1e-9).toFixed(2)}<br>
         🔹 传送带运输间隔：${(curSol.sec + 1e-9).toFixed(2)} 秒
     `;
@@ -474,8 +472,7 @@ document.getElementById('foldManualBtn').onclick = function() {
             manualStepEl.textContent = '0';
             resDiv.innerHTML = `
                 <span class="ok">✅ 无需供电</span><br>
-                <span class="gray">🔹 实际发电功率：0.00</span><br>
-                <span class="gray">🔹 发电功率：0.00</span><br>
+                <span class="gray">🔹 发电功率：200.00（含基地200发电功率）</span><br>
                 <span class="gray">🔹 富余电量：0.00</span><br>
                 <span class="gray">🔹 传送带运输间隔：0.00 秒</span>
             `;
@@ -511,8 +508,7 @@ document.getElementById('foldManualBtn').onclick = function() {
 
         resDiv.innerHTML = `
             ${statusHtml}
-            🔹 实际发电功率：${realNeed.toFixed(2)}<br>
-            🔹 发电功率：${(power + 1e-9).toFixed(2)}<br>
+            🔹 发电功率：${(power + 200 + 1e-9).toFixed(2)}（含基地200发电功率）<br>
             🔹 富余电量：${(surplus + 1e-9).toFixed(2)}<br>
             🔹 传送带运输间隔：${(sec + 1e-9).toFixed(2)} 秒
         `;
