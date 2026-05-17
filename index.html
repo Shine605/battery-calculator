@@ -370,7 +370,7 @@ function refreshUI(inputs) {
 
     bestDiv.innerHTML = `
         🎯 最佳倍率公式：<strong>${displayFormula(globalBest.formula)}</strong><br>
-        🎯 最佳发电功率：${(globalBest.power + 200 + 1e-9).toFixed(2)}（含基地200发电功率）<br>
+        🎯 最佳发电功率：${(globalBest.power + 200 + 1e-9).toFixed(2)}<span class="gray">（含基地200发电功率）<br>
         <hr>
         ${powerWarning}
         🔹 发电功率：${(curSol.power + 200 + 1e-9).toFixed(2)}（含基地200发电功率）<br>
@@ -508,7 +508,7 @@ document.getElementById('foldManualBtn').onclick = function() {
 
         resDiv.innerHTML = `
             ${statusHtml}
-            🔹 发电功率：${(power + 200 + 1e-9).toFixed(2)}（含基地200发电功率）<br>
+            🔹 发电功率：${(power + 200 + 1e-9).toFixed(2)}<span class="gray">（含基地200发电功率）<br>
             🔹 富余电量：${(surplus + 1e-9).toFixed(2)}<br>
             🔹 传送带运输间隔：${(sec + 1e-9).toFixed(2)} 秒
         `;
